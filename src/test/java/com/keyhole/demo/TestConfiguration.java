@@ -1,20 +1,17 @@
-package com.vsp.payment.sftp.example.test.config;
+package com.keyhole.demo;
 
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 
-import com.vsp.batch.test.config.TestVspSpringBatchConfigurer;
-import com.vsp.payment.sftp.example.config.JobConfiguration;
+import com.vsp.payment.sftp.JobConfiguration;
 
 @Configuration
 @EnableBatchProcessing
 
-@Import(value={JobConfiguration.class, TestVspSpringBatchConfigurer.class})
-@ComponentScan(basePackages = { "com.vsp.payment.sftp.example.test" })
+@Import(value={JobConfiguration.class})
 public class TestConfiguration {
 
 	@Bean

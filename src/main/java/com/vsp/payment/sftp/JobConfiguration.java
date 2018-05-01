@@ -1,4 +1,4 @@
-package com.vsp.payment.sftp.example.config;
+package com.vsp.payment.sftp;
 
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecutionListener;
@@ -15,19 +15,14 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.ImportResource;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.annotation.PropertySources;
-import org.springframework.integration.annotation.IntegrationComponentScan;
 import org.springframework.integration.config.EnableIntegration;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.PollableChannel;
 import org.springframework.messaging.support.GenericMessage;
 
-import com.vsp.batch.failurenotification.BatchMonitoringNotifier;
-import com.vsp.batch.failurenotification.EmailMonitoringNotifierImpl;
-import com.vsp.batch.failurenotification.MonitoringExecutionListener;
 
 @Configuration
 @PropertySources(
@@ -38,7 +33,6 @@ import com.vsp.batch.failurenotification.MonitoringExecutionListener;
 	})
 )
 @EnableIntegration
-@Import(PropertiesConfiguration.class)
 @ImportResource("sftp-integration.xml")
 public class JobConfiguration  {
 	@Autowired JobBuilderFactory jobFactory;
@@ -52,20 +46,24 @@ public class JobConfiguration  {
 	public Job instantiateJob() {
 		return jobFactory
 			.get("SendFilesToSAP")
-			.listener(monitoringJobListener())
+//			.listener(monitoringJobListener())
 			.incrementer(new RunIdIncrementer())
 			.flow(ftpLsStep())
 			.end()
 			.build();
 	}
 	
-	@Bean
-	public Step ftpLsStep(){ return stepFactory.get("ViewDirectory").tasklet(viewDirectoryTasklet(null,null)).build();}
+	@Autowired
+	@Qualifier("input" ) MessageChannel  input;
+	
+	@Autowired
+	@Qualifier("output") PollableChannel output;
 	
 	@Bean
-	public Tasklet viewDirectoryTasklet(
-			@Qualifier("input" ) MessageChannel  input,
-			@Qualifier("output") PollableChannel output) {
+	public Step ftpLsStep(){ return stepFactory.get("ViewDirectory").tasklet(viewDirectoryTasklet()).build();}
+	
+	@Bean
+	public Tasklet viewDirectoryTasklet() {
 		return new Tasklet() {
 			public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
 				input.send(new GenericMessage<String>(remoteDir));
@@ -73,15 +71,5 @@ public class JobConfiguration  {
 				return RepeatStatus.FINISHED;
 			}
 		};
-	}
-	
-	@Bean
-	public BatchMonitoringNotifier monitoringNotifier(){ return new EmailMonitoringNotifierImpl(); }
-
-	@Bean
-	public JobExecutionListener monitoringJobListener(){
-		MonitoringExecutionListener monitoringJobListener = new MonitoringExecutionListener();
-		monitoringJobListener.setBatchMonitoringNotifier(monitoringNotifier());
-		return monitoringJobListener;
 	}
 }
